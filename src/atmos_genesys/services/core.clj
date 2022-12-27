@@ -1,2 +1,2 @@
 (ns atmos-genesys.services.core
-  (:require [atmos-genesys.services.logger.core]))
+  (:require [atmos-genesys.services.logger]))
