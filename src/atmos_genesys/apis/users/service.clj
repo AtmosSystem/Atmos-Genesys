@@ -11,13 +11,14 @@
   Map
   (b-login [credentials]
     {:pre [(user-spec/valid-credentials? credentials)]}
-    (let [{:keys [username password remember-me]} credentials]
+    (let [{:keys [username password remember-me]} credentials
+          invalid-credentials-message "Invalid User/Password"]
       (if-let [user-credentials (user-data/user-credentials-> username)]
         (let [password-encoded (hash/encode password :sha256)]
           (if (= (:password user-credentials) password-encoded)
             (user-data/generate-session-> username remember-me)
-            (throw (InvalidParameterException. "Invalid User/Password"))))
-        (throw (InvalidParameterException. "Invalid User/Password")))))
+            (throw (InvalidParameterException. invalid-credentials-message))))
+        (throw (InvalidParameterException. invalid-credentials-message)))))
   String
   (b-logout [session-id]
     {:pre [(user-spec/valid-session-id? session-id)]}
@@ -36,5 +37,7 @@
   (register-user [user-data registration-token]
     {:pre [(user-spec/valid-user-data? user-data)]}
     (if (user-data/valid-registration-token->? registration-token)
-      (user-data/register-user-> user-data)
+      (if-let [user-registered (user-data/register-user-> user-data)]
+        (if (user-data/delete-registration-token-> registration-token)
+          user-registered))
       (throw (InvalidParameterException. "Invalid registration token")))))

@@ -10,7 +10,7 @@
 (def users (data-device :users))
 (def sessions (data-device :sessions))
 (def session-expiration-time 20)                            ; In seconds
-(def registrations (data-device :registration))
+(def registrations (data-device :registrations))
 (def registration-expiration-time 2000)                     ; In seconds
 
 (defn create-data-key [key-type data]
@@ -80,6 +80,20 @@
 (s/fdef generate-registration-token->
         :args (s/cat :username ::user-spec/username)
         :ret ::user-spec/registration-token)
+
+(defn delete-registration-token->
+  [registration-token]
+  (let [data-key (create-data-key :registration registration-token)]
+    (if-let [deleted? (delete-key registrations data-key)]
+      (case deleted?
+        0 false
+        1 (do
+            (log/info (str "The registration token [" registration-token "] was deleted"))
+            true)))))
+
+(s/fdef delete-registration-token->
+        :args (s/cat :session-id ::user-spec/registration-token)
+        :ret boolean?)
 
 (defn valid-registration-token->?
   [token]
