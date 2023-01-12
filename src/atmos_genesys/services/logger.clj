@@ -8,27 +8,33 @@
   [log-data]
   (if (log-spec/log-valid? log-data) log-data))
 
+(defmacro handle-log
+  [& body]
+  `(do
+     ~@body
+     "OK"))
+
 (extend-protocol log-core/ILoggerActions
   Map
   (info [this]
     (if-let [data (log-valid? this)]
-      (timbre/info data)))
+      (handle-log (timbre/info data))))
 
   (debug [this]
     (if-let [data (log-valid? this)]
-      (timbre/debug data)))
+      (handle-log (timbre/debug data))))
 
   (error [this]
     (if-let [data (log-valid? this)]
-      (timbre/error data)))
+      (handle-log (timbre/error data))))
 
   (trace [this]
     (if-let [data (log-valid? this)]
-      (timbre/trace data)))
+      (handle-log (timbre/trace data))))
 
   (warn [this]
     (if-let [data (log-valid? this)]
-      (timbre/warn data)))
+      (handle-log (timbre/warn data))))
 
   (exception [this]
     (log-core/error this))
