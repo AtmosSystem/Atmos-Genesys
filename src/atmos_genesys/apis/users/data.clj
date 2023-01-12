@@ -3,15 +3,18 @@
             [atmos-genesys.apis.users.spec :as user-spec]
             [atmos-genesys.services.data.core :refer [data-device]]
             [atmos-genesys.services.hash :as hash]
+            [atmos-kernel.configuration :as config]
             [atmos-logs.core :as log]
             [clojure.spec.alpha :as s])
   (:import (java.util UUID)))
 
+(def settings (config/read-edn :settings))
+
 (def users (data-device :users))
 (def sessions (data-device :sessions))
-(def session-expiration-time 20)                            ; In seconds
+(def session-expiration-time (get-in settings [:sessions :expiration-time])) ; In seconds
 (def registrations (data-device :registrations))
-(def registration-expiration-time 2000)                     ; In seconds
+(def registration-expiration-time (get-in settings [:registrations :expiration-time])) ; In seconds
 
 (defn create-data-key [key-type data]
   (str (name key-type) ":" data))
@@ -21,11 +24,12 @@
   (when-let [session-id (hash/encode (-> (UUID/randomUUID) str) :sha1)]
     (let [data-key (create-data-key :session session-id)
           encrypted-username (hash/encode username :sha256)]
-      (set-key-value sessions data-key {:username encrypted-username}
-                     {:expire (if-not remember-me {:type :expire :value session-expiration-time})}))
-    (do
-      (log/info "New logging session generated")
-      session-id)))
+      (if-let [key-result (set-key-value sessions data-key {:username encrypted-username}
+                                         {:expire (if remember-me :never session-expiration-time)})]
+        (cond
+          (or (= key-result ["OK" 1]) (= key-result "OK")) (do
+                                                             (log/info "New logging session generated")
+                                                             session-id))))))
 
 (s/fdef generate-session->
         :args (s/cat :username ::user-spec/username :remember-me ::user-spec/remember-me)
@@ -71,11 +75,12 @@
   (when-let [token (hash/encode (-> (UUID/randomUUID) str) :sha256)]
     (let [data-key (create-data-key :registration token)
           encrypted-username (hash/encode username :sha256)]
-      (set-key-value registrations data-key {:username encrypted-username}
-                     {:type :expire :value registration-expiration-time}))
-    (do
-      (log/info "New registration token generated")
-      token)))
+      (if-let [key-result (set-key-value registrations data-key {:username encrypted-username}
+                                         {:expire registration-expiration-time})]
+        (cond
+          (or (= key-result ["OK" 1]) (= key-result "OK")) (do
+                                                             (log/info "New registration token generated")
+                                                             token))))))
 
 (s/fdef generate-registration-token->
         :args (s/cat :username ::user-spec/username)
