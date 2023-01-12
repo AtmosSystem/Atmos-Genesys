@@ -3,6 +3,6 @@
             [atmos-logs.web.api :as logs]))
 
 
-(def all-routes
+(def routes
   (concat logs/routes
           users/routes))

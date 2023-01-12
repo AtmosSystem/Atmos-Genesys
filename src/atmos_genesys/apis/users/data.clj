@@ -102,3 +102,5 @@
         (log/info "New user registered")
         data-added))))
 
+(s/fdef register-user->
+        :args (s/cat :user-data ::user-spec/user-data))
