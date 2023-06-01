@@ -15,8 +15,4 @@
                  [atmos-web-kernel-reitit "2.0-SNAPSHOT"]
                  ; Logging
                  [atmos-logs "3.0-SNAPSHOT"]
-                 [com.taoensso/timbre "5.2.1"]]
-  :main ^:skip-aot atmos-genesys.core
-  :target-path "target/%s"
-  :profiles {:uberjar {:aot      :all
-                       :jvm-opts ["-Dclojure.compiler.direct-linking=true"]}})
+                 [com.taoensso/timbre "5.2.1"]])
