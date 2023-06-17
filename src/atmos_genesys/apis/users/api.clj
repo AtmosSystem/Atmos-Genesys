@@ -6,21 +6,21 @@
 
 (def auth-routes
   ["/basic"
-   ["/login/" {:name       ::users-basic-auth-login
+   ["/login/" {:name       ::basic-auth-login
                :parameters {:body ::user-spec/user-credentials}
                :post       (web/web-handler
                              (fn [{:keys [body-params]}]
                                (let [credentials (serializer/de-serialize body-params (:login user-spec/de-serializer-maps))]
                                  (c/b-login credentials))))}]
 
-   ["/:session-id/logout/" {:name       ::users-basic-auth-logout
+   ["/:session-id/logout/" {:name       ::basic-auth-logout
                             :parameters {:path {:session-id ::user-spec/session-id}}
                             :put        (web/web-handler
                                           (fn [{:keys [path-params]}]
                                             (let [{:keys [session-id]} (serializer/de-serialize path-params (:logout user-spec/de-serializer-maps))]
                                               (c/b-logout session-id))))}]
 
-   ["/:session-id/logged/" {:name       ::users-basic-auth-logged?
+   ["/:session-id/logged/" {:name       ::basic-auth-logged?
                             :parameters {:path {:session-id ::user-spec/session-id}}
                             :get        (web/web-handler
                                           (fn [{:keys [path-params]}]
@@ -28,14 +28,14 @@
                                               (c/b-logged? session-id))))}]])
 
 (def registration-routes
-  [["/:username/token/" {:name       ::users-registration-token
+  [["/:username/token/" {:name       ::registration-token
                          :parameters {:path {:username ::user-spec/username}}
                          :get        (web/web-handler
                                        (fn [{:keys [path-params]}]
                                          (let [{:keys [username]} (serializer/de-serialize path-params (:registration-token user-spec/de-serializer-maps))]
                                            (c/registration-token username))))}]
 
-   ["/create/" {:name       ::users-create-registration
+   ["/create/" {:name       ::create-registration
                 :parameters {:body ::user-spec/create-registration}
                 :post       (web/web-handler
                               (fn [{:keys [body-params]}]

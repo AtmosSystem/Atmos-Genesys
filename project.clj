@@ -7,6 +7,7 @@
                  [atmos-kernel "2.2-SNAPSHOT"]
                  [clojure.java-time "1.2.0"]
                  [org.clojure/core.memoize "1.0.257"]
+                 [inflections "0.14.1"]
                  ; Security
                  [buddy/buddy-core "1.10.413"]
                  ; Data

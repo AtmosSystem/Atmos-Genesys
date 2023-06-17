@@ -1,84 +1,101 @@
 (ns atmos-genesys.apis.builders
-  (:require [atmos-kernel.serializer.core :as serializer]
+  (:require [atmos-data-kernel.services :as data-service]
+            [atmos-kernel.serializer.core :as serializer]
             [atmos-web-kernel-reitit.core :as web]
-            [clojure.string :as string]))
+            [inflections.core :as inflections])
+  (:import (java.security InvalidParameterException)))
 
 (defn- route-child-name
-  [prefix route-name]
-  (keyword (string/join "-" (map name [prefix route-name]))))
+  [ns prefix]
+  (apply keyword (map name [ns prefix])))
 
-(defmulti child-route (fn [route-name parent-route-name handler-serializers handlers] (keyword route-name)))
+(defn- route-handler
+  [route-type handlers & {:keys [default required] :or {default nil required false}}]
+  (if-let [route-handler (route-type handlers)]
+    (let [{:keys [specs handler]} route-handler]
+      [specs (or handler default)])
+    (if-not required
+      [nil default]
+      (throw (InvalidParameterException. "A valid route type is required on handler")))))
 
-(defmethod child-route :all [_ parent-route-name handler-serializers handlers]
-  (let [route-name (route-child-name :all parent-route-name)
-        {:keys [handler _]} (:all handlers)]
-    ["/all/" {:name route-name
-              :get  (web/web-handler
-                      (handler-serializers route-name)
-                      (fn [_]
-                        (handler parent-route-name)))}]))
+(defmulti child-route (fn [ns route-type parent-route-name handler-serializers handlers] (keyword route-type)))
 
-(defmethod child-route :single [_ parent-route-name handler-serializers handlers]
-  (let [route-name (route-child-name :get parent-route-name)
-        {:keys [handler specs]} (:single handlers)]
-    ["/:id/" {:name       route-name
-              :parameters {:path {:id specs}}
-              :get        (web/web-handler
-                            (handler-serializers route-name)
+(defmethod child-route :all [ns _ parent-route-name handler-serializers handlers]
+  (let [full-route-name (route-child-name ns :all)
+        {:keys [_ handler]} (route-handler :all handlers :default data-service/all)]
+    ["/all/" {:name        full-route-name
+              :conflicting true
+              :get         (web/web-handler
+                             (fn [_]
+                               (handler parent-route-name))
 
-                            (fn [{:keys [path-params]} request]
-                              (let [{:keys [id]} path-params
-                                    id (serializer/de-serialize id (-> request meta :data-de-serializer))]
+                             :serializers (handler-serializers :all))}]))
 
-                                (handler parent-route-name :by id))))}]))
+(defmethod child-route :one [ns _ parent-route-name handler-serializers handlers]
+  (let [full-route-name (route-child-name ns :one)
+        {:keys [specs handler]} (route-handler :one handlers :default data-service/get)]
+    ["/:id/" {:name        full-route-name
+              :parameters  {:path {:id specs}}
+              :conflicting true
+              :get         (web/web-handler
+                             (fn [{:keys [path-params]} request]
+                               (let [{:keys [id]} path-params
+                                     id (serializer/de-serialize id (-> request meta :data-de-serializer))]
+                                 (handler parent-route-name :by id)))
 
-(defmethod child-route :create [_ parent-route-name handler-serializers handlers]
-  (let [route-name (route-child-name :create parent-route-name)
-        {:keys [handler specs]} (:create handlers)]
-    ["/" {:name       route-name
-          :parameters {:body specs}
-          :post       (web/web-handler
-                        (handler-serializers route-name)
+                             :serializers (handler-serializers :one))}]))
 
-                        (fn [{:keys [body-params]} request]
-                          (let [data (serializer/de-serialize body-params (-> request meta :data-de-serializer))]
-                            (handler data))))}]))
+(defmethod child-route :create [ns _ _ handler-serializers handlers]
+  (let [full-route-name (route-child-name ns :create)
+        {:keys [specs handler]} (route-handler :create handlers :required true)]
+    ["/" {:name        full-route-name
+          :parameters  {:body specs}
+          :conflicting true
+          :post        (web/web-handler
+                         (fn [{:keys [body-params]} request]
+                           (let [data (serializer/de-serialize body-params (-> request meta :data-de-serializer))]
+                             (handler data)))
+                         :serializers (handler-serializers :create))}]))
 
-(defmethod child-route :update [_ parent-route-name handler-serializers handlers]
-  (let [route-name (route-child-name :update parent-route-name)
-        {:keys [handler specs]} (:update handlers)]
-    ["/" {:name       route-name
-          :parameters {:body specs}
-          :put        (web/web-handler
-                        (handler-serializers route-name)
+(defmethod child-route :update [ns _ _ handler-serializers handlers]
+  (let [full-route-name (route-child-name ns :update)
+        {:keys [specs handler]} (route-handler :update handlers :required true)]
+    ["/" {:name        full-route-name
+          :parameters  {:body specs}
+          :conflicting true
+          :put         (web/web-handler
+                         (fn [{:keys [body-params]} request]
+                           (let [data (serializer/de-serialize body-params (-> request meta :data-de-serializer))]
+                             (handler data)))
+                         :serializers (handler-serializers :update))}]))
 
-                        (fn [{:keys [body-params]} request]
-                          (let [data (serializer/de-serialize body-params (-> request meta :data-de-serializer))]
-                            (handler data))))}]))
+(defmethod child-route :delete [ns _ _ handler-serializers handlers]
+  (let [full-route-name (route-child-name ns :delete)
+        {:keys [specs handler]} (route-handler :update handlers :required true)]
+    ["/:id/" {:name        full-route-name
+              :parameters  {:path {:id specs}}
+              :conflicting true
+              :delete      (web/web-handler
+                             (fn [{:keys [path-params]} request]
+                               (let [{:keys [id]} path-params
+                                     id (serializer/de-serialize id (-> request meta :data-de-serializer))]
 
-(defmethod child-route :delete [_ parent-route-name handler-serializers handlers]
-  (let [route-name (route-child-name :delete parent-route-name)
-        {:keys [handler specs]} (:delete handlers)]
-    ["/:id/" {:name       route-name
-              :parameters {:path {:id specs}}
-              :delete     (web/web-handler
-                            (handler-serializers route-name)
-
-                            (fn [{:keys [path-params]} request]
-                              (let [{:keys [id]} path-params
-                                    id (serializer/de-serialize id (-> request meta :data-de-serializer))]
-
-                                (handler id))))}]))
+                                 (handler id)))
+                             :serializers (handler-serializers :delete))}]))
 
 
 (defn simple-routes
   [routes]
-  (let [{:keys [names serializers handlers]} routes
-        [singular-name plural-name] names
-        parent-route (str "/" (name plural-name))]
+  (let [{:keys [serializers handlers]} routes
+        {api-name :name} routes
+        [singular-name namespace-name parent-route] [(inflections/singular api-name) (namespace api-name) (str "/" (name api-name))]
+        child-route-simplified (fn [route-type]
+                                 (child-route namespace-name route-type
+                                              (if (= route-type :all) api-name singular-name)
+                                              serializers handlers))]
     [parent-route
-     (child-route :all plural-name serializers handlers)
-     (child-route :single singular-name serializers handlers)
-     (child-route :create singular-name serializers handlers)
-     (child-route :update singular-name serializers handlers)
-     (child-route :delete singular-name serializers handlers)]))
+     (child-route-simplified :all)
+     (child-route-simplified :one)
+     (child-route-simplified :create)
+     (child-route-simplified :update)
+     (child-route-simplified :delete)]))
