@@ -1,22 +1,42 @@
 (ns atmos-genesys.apis.builders
   (:require [atmos-data-kernel.services :as data-service]
+            [atmos-logs.core :as log]
             [atmos-web-kernel-reitit.core :as web]
             [inflections.core :as inflections]
             [reitit.coercion.spec])
-  (:import (java.security InvalidParameterException)))
+  (:import (clojure.lang ExceptionInfo)
+           (java.security InvalidParameterException)))
+
+(def default-responses {204 {204 "The resource was not created"}
+                        404 {404 "Resource not found"}
+                        400 {400 "Bad request. Can't process the request"}})
+
+(defn try-response-or-catch
+  ([handler default-response]
+   (try-response-or-catch handler 200 default-response))
+  ([handler http-code-or-fn default-response]
+   (let [default-response (get default-responses default-response)]
+     (try
+       (if-let [data (handler)]
+         (if (fn? http-code-or-fn) (http-code-or-fn data) {http-code-or-fn data}) default-response)
+       (catch AssertionError e (log/exception e) default-response)
+       (catch ExceptionInfo e
+         (log/exception e) (let [data (assoc (ex-data e) :message (ex-message e))]
+                             {400 data}))))))
+
 
 (defn- route-child-names
   [api-name prefix]
   (let [api-namespace (namespace api-name)
         route-name (keyword api-namespace (name prefix))
         single-api-name (name api-name)
-        single-api-name (if (= prefix :all) single-api-name (inflections/singular single-api-name))]
+        single-api-name (if (= prefix :collection) single-api-name (inflections/singular single-api-name))]
     [route-name single-api-name]))
 
 (defn- route-handler
   [route-type handlers & {:keys [default required] :or {default nil required false}}]
   (if-let [route-handler (route-type handlers)]
-    (let [{:keys [specs handler]} route-handler
+    (let [{:keys [specs handler] :or {specs {}}} route-handler
           {:keys [request response] :or {request nil response nil}} specs]
       [request response (or handler default)])
     (if-not required
@@ -25,89 +45,76 @@
 
 (defmulti child-route (fn [api-name route-type handlers] (keyword route-type)))
 
-(defmethod child-route :all [api-name _ handlers]
-  (let [[route-name single-api-name] (route-child-names api-name :all)
-        route-path (str "/all-" single-api-name "/")
-        [_ response-specs handler] (route-handler :all handlers :default data-service/all)]
-    [route-path {:name        route-name
-                 :coercion    reitit.coercion.spec/coercion
-                 :responses   {200 {:body response-specs}}
-                 :conflicting true
-                 :get         (web/web-handler
-                                (fn [_]
-                                  (handler single-api-name)))}]))
+(defmethod child-route :collection [api-name _ handlers]
+  (let [[route-name single-api-name] (route-child-names api-name :collection)
 
-(defmethod child-route :one [api-name _ handlers]
-  (let [[route-name single-api-name] (route-child-names api-name :one)
-        route-path (str "/" single-api-name "/:id/")
-        [request-specs response-specs handler] (route-handler :one handlers :default data-service/get)]
-    [route-path {:name        route-name
-                 :coercion    reitit.coercion.spec/coercion
-                 :parameters  {:path {:id request-specs}}
-                 :responses   {200 {:body response-specs}
-                               404 {:body string?}}
-                 :conflicting true
-                 :get         (web/web-handler
-                                (fn [{:keys [parameters]}]
-                                  (let [{:keys [id]} (-> parameters :path)]
-                                    (if-let [data (handler single-api-name :by id)]
-                                      data
-                                      {404 "Resource not found"}))))}]))
+        {collection-handlers :collection} handlers
 
-(defmethod child-route :create [api-name _ handlers]
-  (let [[route-name single-api-name] (route-child-names api-name :create)
-        route-path (str "/" single-api-name "/")
-        [request-specs response-specs handler] (route-handler :create handlers :required true)]
-    [route-path {:name        route-name
-                 :coercion    reitit.coercion.spec/coercion
-                 :parameters  {:body request-specs}
-                 :responses   {201 {:body response-specs}
-                               204 {:body string?}}
-                 :conflicting true
-                 :post        (web/web-handler
-                                (fn [{:keys [parameters]}]
-                                  (let [data (-> parameters :body)]
-                                    (if-let [data (handler data)]
-                                      {201 data}
-                                      {204 "The resource was not created"}))))}]))
+        [_ all-response-spec all-handler] (route-handler :all collection-handlers :default data-service/all)
+        [create-request-spec create-response-spec create-handler] (route-handler :create collection-handlers :required true)]
+    ["" {:name     route-name
+         :coercion reitit.coercion.spec/coercion
 
-(defmethod child-route :update [api-name _ handlers]
-  (let [[route-name single-api-name] (route-child-names api-name :update)
-        route-path (str "/" single-api-name "/")
-        [request-specs response-specs handler] (route-handler :update handlers :required true)]
-    [route-path {:name        route-name
-                 :coercion    reitit.coercion.spec/coercion
-                 :parameters  {:body request-specs}
-                 :responses   {200 {:body response-specs}}
-                 :conflicting true
-                 :put         (web/web-handler
-                                (fn [{:keys [parameters]}]
-                                  (let [data (-> parameters :body)]
-                                    (handler data))))}]))
+         :get      {:responses {200 {:body all-response-spec}}
+                    :handler   (web/web-handler
+                                 (fn [_]
+                                   (all-handler single-api-name)))}
 
-(defmethod child-route :delete [api-name _ handlers]
-  (let [[route-name single-api-name] (route-child-names api-name :delete)
-        route-path (str "/" single-api-name "/:id/")
-        [request-specs response-specs handler] (route-handler :update handlers :required true)]
-    [route-path {:name        route-name
-                 :coercion    reitit.coercion.spec/coercion
-                 :parameters  {:path {:id request-specs}}
-                 :responses   {200 {:body response-specs}}
-                 :conflicting true
-                 :delete      (web/web-handler
-                                (fn [{:keys [parameters]}]
-                                  (let [{:keys [id]} (-> parameters :path)]
-                                    (handler id))))}]))
+         :post     {:parameters {:body create-request-spec}
+                    :responses  {201 {:body create-response-spec}
+                                 400 {:body string?}}
+                    :handler    (web/web-handler
+                                  (fn [{:keys [parameters]}]
+                                    (let [data (-> parameters :body)]
+                                      (try-response-or-catch #(create-handler data) 201 400))))}}]))
+
+(defmethod child-route :document [api-name _ handlers]
+  (let [[route-name single-api-name] (route-child-names api-name :document)
+
+        {document-handlers :document} handlers
+        {request-specs :request response-spec :response} (-> document-handlers :specs)
+        {path-request-spec :path body-request-spec :body} request-specs
+
+        [_ _ one-handler] (route-handler :one document-handlers :default data-service/get)
+        [_ _ update-handler] (route-handler :update document-handlers :required true)
+        [_ _ delete-handler] (route-handler :delete document-handlers :required true)]
+    ["/{id}" {:name     route-name
+              :coercion reitit.coercion.spec/coercion
+
+              :get      {:parameters {:path {:id path-request-spec}}
+                         :responses  {200 {:body response-spec}
+                                      404 {:body string?}}
+                         :handler    (web/web-handler
+                                       (fn [{:keys [parameters]}]
+                                         (let [{:keys [id]} (-> parameters :path)]
+                                           (try-response-or-catch
+                                             #(one-handler single-api-name :by id) 404))))}
+
+              :put      {:parameters {:path {:id path-request-spec}
+                                      :body body-request-spec}
+                         :responses  {200 {:body map?}}
+                         :handler    (web/web-handler
+                                       (fn [{:keys [parameters]}]
+                                         (let [data (-> parameters :body)
+                                               document-id (-> parameters :path :id)]
+                                           (try-response-or-catch #(update-handler document-id data)
+                                                                  (fn [updated?] {:updated updated?}) 400))))}
+
+              :delete   {:parameters {:path {:id path-request-spec}}
+                         :responses  {200 {:body map?}
+                                      400 {:body string?}}
+                         :handler    (web/web-handler
+                                       (fn [{:keys [parameters]}]
+                                         (let [{:keys [id]} (-> parameters :path)]
+                                           (try-response-or-catch #(delete-handler id)
+                                                                  (fn [deleted?] {:deleted deleted?}) 400))))}}]))
 
 
 (defn simple-routes
   [routes]
   (let [{api-name :name handlers :handlers} routes
-        route-name (str "/" (-> api-name name keyword))
+        route-name (str "/" (-> api-name name))
         child-route-simplified (fn [route-type] (child-route api-name route-type handlers))]
     [route-name
-     (child-route-simplified :all)
-     (child-route-simplified :one)
-     (child-route-simplified :create)
-     (child-route-simplified :update)
-     (child-route-simplified :delete)]))
+     (child-route-simplified :collection)
+     (child-route-simplified :document)]))
