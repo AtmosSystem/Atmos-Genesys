@@ -42,12 +42,15 @@
     ["/:id/" {:name        route-name
               :coercion    reitit.coercion.spec/coercion
               :parameters  {:path {:id request-specs}}
-              :responses   {200 {:body response-specs}}
+              :responses   {200 {:body response-specs}
+                            404 {:body string?}}
               :conflicting true
               :get         (web/web-handler
                              (fn [{:keys [parameters]}]
                                (let [{:keys [id]} (-> parameters :path)]
-                                 (handler single-api-name :by id))))}]))
+                                 (if-let [data (handler single-api-name :by id)]
+                                   data
+                                   {404 "Resource not found"}))))}]))
 
 (defmethod child-route :create [api-name _ handlers]
   (let [[route-name _] (route-child-names api-name :create)
