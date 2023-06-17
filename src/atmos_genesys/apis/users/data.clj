@@ -97,7 +97,7 @@
             true)))))
 
 (s/fdef delete-registration-token->
-        :args (s/cat :session-id ::user-spec/registration-token)
+        :args (s/cat :registration-token ::user-spec/registration-token)
         :ret boolean?)
 
 (defn valid-registration-token->?

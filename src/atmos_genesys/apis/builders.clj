@@ -27,69 +27,77 @@
 
 (defmethod child-route :all [api-name _ handlers]
   (let [[route-name single-api-name] (route-child-names api-name :all)
+        route-path (str "/all-" single-api-name "/")
         [_ response-specs handler] (route-handler :all handlers :default data-service/all)]
-    ["/all/" {:name        route-name
-              :coercion    reitit.coercion.spec/coercion
-              :responses   {200 {:body response-specs}}
-              :conflicting true
-              :get         (web/web-handler
-                             (fn [_]
-                               (handler single-api-name)))}]))
+    [route-path {:name        route-name
+                 :coercion    reitit.coercion.spec/coercion
+                 :responses   {200 {:body response-specs}}
+                 :conflicting true
+                 :get         (web/web-handler
+                                (fn [_]
+                                  (handler single-api-name)))}]))
 
 (defmethod child-route :one [api-name _ handlers]
   (let [[route-name single-api-name] (route-child-names api-name :one)
+        route-path (str "/" single-api-name "/:id/")
         [request-specs response-specs handler] (route-handler :one handlers :default data-service/get)]
-    ["/:id/" {:name        route-name
-              :coercion    reitit.coercion.spec/coercion
-              :parameters  {:path {:id request-specs}}
-              :responses   {200 {:body response-specs}
-                            404 {:body string?}}
-              :conflicting true
-              :get         (web/web-handler
-                             (fn [{:keys [parameters]}]
-                               (let [{:keys [id]} (-> parameters :path)]
-                                 (if-let [data (handler single-api-name :by id)]
-                                   data
-                                   {404 "Resource not found"}))))}]))
+    [route-path {:name        route-name
+                 :coercion    reitit.coercion.spec/coercion
+                 :parameters  {:path {:id request-specs}}
+                 :responses   {200 {:body response-specs}
+                               404 {:body string?}}
+                 :conflicting true
+                 :get         (web/web-handler
+                                (fn [{:keys [parameters]}]
+                                  (let [{:keys [id]} (-> parameters :path)]
+                                    (if-let [data (handler single-api-name :by id)]
+                                      data
+                                      {404 "Resource not found"}))))}]))
 
 (defmethod child-route :create [api-name _ handlers]
-  (let [[route-name _] (route-child-names api-name :create)
+  (let [[route-name single-api-name] (route-child-names api-name :create)
+        route-path (str "/" single-api-name "/")
         [request-specs response-specs handler] (route-handler :create handlers :required true)]
-    ["/" {:name        route-name
-          :coercion    reitit.coercion.spec/coercion
-          :parameters  {:body request-specs}
-          :responses   {200 {:body response-specs}}
-          :conflicting true
-          :post        (web/web-handler
-                         (fn [{:keys [parameters]}]
-                           (let [data (-> parameters :body)]
-                             (handler data))))}]))
+    [route-path {:name        route-name
+                 :coercion    reitit.coercion.spec/coercion
+                 :parameters  {:body request-specs}
+                 :responses   {201 {:body response-specs}
+                               204 {:body string?}}
+                 :conflicting true
+                 :post        (web/web-handler
+                                (fn [{:keys [parameters]}]
+                                  (let [data (-> parameters :body)]
+                                    (if-let [data (handler data)]
+                                      {201 data}
+                                      {204 "The resource was not created"}))))}]))
 
 (defmethod child-route :update [api-name _ handlers]
-  (let [[route-name _] (route-child-names api-name :update)
+  (let [[route-name single-api-name] (route-child-names api-name :update)
+        route-path (str "/" single-api-name "/")
         [request-specs response-specs handler] (route-handler :update handlers :required true)]
-    ["/" {:name        route-name
-          :coercion    reitit.coercion.spec/coercion
-          :parameters  {:body request-specs}
-          :responses   {200 {:body response-specs}}
-          :conflicting true
-          :put         (web/web-handler
-                         (fn [{:keys [parameters]}]
-                           (let [data (-> parameters :body)]
-                             (handler data))))}]))
+    [route-path {:name        route-name
+                 :coercion    reitit.coercion.spec/coercion
+                 :parameters  {:body request-specs}
+                 :responses   {200 {:body response-specs}}
+                 :conflicting true
+                 :put         (web/web-handler
+                                (fn [{:keys [parameters]}]
+                                  (let [data (-> parameters :body)]
+                                    (handler data))))}]))
 
 (defmethod child-route :delete [api-name _ handlers]
-  (let [[route-name _] (route-child-names api-name :delete)
+  (let [[route-name single-api-name] (route-child-names api-name :delete)
+        route-path (str "/" single-api-name "/:id/")
         [request-specs response-specs handler] (route-handler :update handlers :required true)]
-    ["/:id/" {:name        route-name
-              :coercion    reitit.coercion.spec/coercion
-              :parameters  {:path {:id request-specs}}
-              :responses   {200 {:body response-specs}}
-              :conflicting true
-              :delete      (web/web-handler
-                             (fn [{:keys [parameters]}]
-                               (let [{:keys [id]} (-> parameters :path)]
-                                 (handler id))))}]))
+    [route-path {:name        route-name
+                 :coercion    reitit.coercion.spec/coercion
+                 :parameters  {:path {:id request-specs}}
+                 :responses   {200 {:body response-specs}}
+                 :conflicting true
+                 :delete      (web/web-handler
+                                (fn [{:keys [parameters]}]
+                                  (let [{:keys [id]} (-> parameters :path)]
+                                    (handler id))))}]))
 
 
 (defn simple-routes

@@ -7,14 +7,13 @@
 (s/def ::password string?)
 (s/def ::remember-me boolean?)
 (s/def ::session-id ::atmos-spec/non-blank-string)
-(s/def ::registration-token (s/and ::atmos-spec/non-blank-string #(>= 8 (count %))))
+(s/def ::registration-token (s/and ::atmos-spec/non-blank-string #(<= 8 (count %))))
 (s/def ::registration-type ::atmos-spec/non-blank-string)   ; email, social profiles
 (s/def ::first-name string?)
 (s/def ::last-name string?)
 
 (s/def ::user-credentials (s/keys :req-un [::username ::password ::remember-me]))
 (s/def ::user-data (s/keys :req-un [::registration-type ::username ::first-name ::last-name ::password]))
-(s/def ::registration-token (s/keys :req-un [::username]))
 (s/def ::new-registration (s/keys :req-un [::user-data ::registration-token]))
 
 (defn valid-credentials? [credentials] (s/valid? ::user-credentials credentials))
