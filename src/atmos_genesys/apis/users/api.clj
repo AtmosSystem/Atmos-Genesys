@@ -1,45 +1,50 @@
 (ns atmos-genesys.apis.users.api
   (:require [atmos-genesys.apis.users.core :as c]
             [atmos-genesys.apis.users.spec :as user-spec]
-            [atmos-kernel.serializer.core :as serializer]
-            [atmos-web-kernel-reitit.core :as web]))
+            [atmos-web-kernel-reitit.core :as web]
+            [reitit.coercion.spec]))
 
 (def auth-routes
   ["/basic"
    ["/login/" {:name       ::basic-auth-login
+               :coercion   reitit.coercion.spec/coercion
                :parameters {:body ::user-spec/user-credentials}
                :post       (web/web-handler
-                             (fn [{:keys [body-params]}]
-                               (let [credentials (serializer/de-serialize body-params (:login user-spec/de-serializer-maps))]
+                             (fn [{:keys [parameters]}]
+                               (let [credentials (-> parameters :body)]
                                  (c/b-login credentials))))}]
 
    ["/:session-id/logout/" {:name       ::basic-auth-logout
+                            :coercion   reitit.coercion.spec/coercion
                             :parameters {:path {:session-id ::user-spec/session-id}}
                             :put        (web/web-handler
-                                          (fn [{:keys [path-params]}]
-                                            (let [{:keys [session-id]} (serializer/de-serialize path-params (:logout user-spec/de-serializer-maps))]
+                                          (fn [{:keys [parameters]}]
+                                            (let [{:keys [session-id]} (-> parameters :path)]
                                               (c/b-logout session-id))))}]
 
    ["/:session-id/logged/" {:name       ::basic-auth-logged?
+                            :coercion   reitit.coercion.spec/coercion
                             :parameters {:path {:session-id ::user-spec/session-id}}
                             :get        (web/web-handler
-                                          (fn [{:keys [path-params]}]
-                                            (let [{:keys [session-id]} (serializer/de-serialize path-params (:logged? user-spec/de-serializer-maps))]
+                                          (fn [{:keys [parameters]}]
+                                            (let [{:keys [session-id]} (-> parameters :path)]
                                               (c/b-logged? session-id))))}]])
 
 (def registration-routes
   [["/:username/token/" {:name       ::registration-token
+                         :coercion   reitit.coercion.spec/coercion
                          :parameters {:path {:username ::user-spec/username}}
                          :get        (web/web-handler
-                                       (fn [{:keys [path-params]}]
-                                         (let [{:keys [username]} (serializer/de-serialize path-params (:registration-token user-spec/de-serializer-maps))]
+                                       (fn [{:keys [parameters]}]
+                                         (let [{:keys [username]} (-> parameters :path)]
                                            (c/registration-token username))))}]
 
    ["/create/" {:name       ::create-registration
-                :parameters {:body ::user-spec/create-registration}
+                :coercion   reitit.coercion.spec/coercion
+                :parameters {:body ::user-spec/new-registration}
                 :post       (web/web-handler
-                              (fn [{:keys [body-params]}]
-                                (let [{:keys [user-data registration-token]} (serializer/de-serialize body-params (:create-registration user-spec/de-serializer-maps))]
+                              (fn [{:keys [parameters]}]
+                                (let [{:keys [user-data registration-token]} (-> parameters :body)]
                                   (c/register-user user-data registration-token))))}]])
 
 

@@ -15,13 +15,7 @@
 (s/def ::user-credentials (s/keys :req-un [::username ::password ::remember-me]))
 (s/def ::user-data (s/keys :req-un [::registration-type ::username ::first-name ::last-name ::password]))
 (s/def ::registration-token (s/keys :req-un [::username]))
-(s/def ::create-registration (s/keys :req-un [::user-data ::registration-token]))
-
-(def de-serializer-maps {:login               {:data-spec ::user-credentials}
-                         :logout              {:data-spec ::session-id}
-                         :logged?             {:data-spec ::session-id}
-                         :registration-token  {:data-spec ::registration-token}
-                         :create-registration {:data-spec ::create-registration}})
+(s/def ::new-registration (s/keys :req-un [::user-data ::registration-token]))
 
 (defn valid-credentials? [credentials] (s/valid? ::user-credentials credentials))
 (defn valid-username? [username] (s/valid? ::username username))

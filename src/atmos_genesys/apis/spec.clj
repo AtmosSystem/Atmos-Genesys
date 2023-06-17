@@ -14,12 +14,3 @@
                                              :api.route.method/post
                                              :api.route.method/put
                                              :api.route.method/delete])))
-
-
-(defmacro register-serializers
-  [de-serializer-maps serializer-maps]
-  (let [fn-name-symbol (symbol 'serializers)
-        fn-args ['serializer-key]]
-    `(defn ^{:name ~fn-name-symbol}
-       ~fn-name-symbol ~fn-args
-       (map (first ~fn-args) [~de-serializer-maps ~serializer-maps]))))
