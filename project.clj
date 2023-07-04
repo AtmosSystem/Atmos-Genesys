@@ -16,4 +16,7 @@
                  [org.clojars.atmos-system/atmos-web-kernel-reitit "2.0-SNAPSHOT"]
                  ; Logging
                  [org.clojars.atmos-system/atmos-logs "3.0-SNAPSHOT"]
-                 [com.taoensso/timbre "5.2.1"]])
+                 [com.taoensso/timbre "5.2.1"]]
+  :deploy-repositories [["clojars" {:url      "https://repo.clojars.org/"
+                                    :username :env/clojars_username
+                                    :password :env/clojars_password}]])
