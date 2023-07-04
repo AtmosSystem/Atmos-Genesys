@@ -2,6 +2,8 @@
 
 # Atmos Genesys
 
+[![Clojars Project](https://img.shields.io/clojars/v/org.clojars.atmos-system/atmos-genesys.svg)](https://clojars.org/org.clojars.atmos-system/atmos-genesys)
+
 This library is used as a base to other atmos projects.
 
 ## Installation
