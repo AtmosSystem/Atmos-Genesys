@@ -1,12 +1,7 @@
 (ns atmos-genesys.services.logger
   (:require [atmos-logs.core :as log-core]
-            [atmos-logs.spec :as log-spec]
             [taoensso.timbre :as timbre])
   (:import (java.util Map)))
-
-(defn- log-valid?
-  [log-data]
-  (if (log-spec/log-valid? log-data) log-data))
 
 (defmacro handle-log
   [& body]
@@ -17,24 +12,19 @@
 (extend-protocol log-core/ILoggerActions
   Map
   (info [this]
-    (if-let [data (log-valid? this)]
-      (handle-log (timbre/info data))))
+    (handle-log (timbre/info this)))
 
   (debug [this]
-    (if-let [data (log-valid? this)]
-      (handle-log (timbre/debug data))))
+    (handle-log (timbre/debug this)))
 
   (error [this]
-    (if-let [data (log-valid? this)]
-      (handle-log (timbre/error data))))
+    (handle-log (timbre/error this)))
 
   (trace [this]
-    (if-let [data (log-valid? this)]
-      (handle-log (timbre/trace data))))
+    (handle-log (timbre/trace this)))
 
   (warn [this]
-    (if-let [data (log-valid? this)]
-      (handle-log (timbre/warn data))))
+    (handle-log (timbre/warn this)))
 
   (exception [this]
     (log-core/error this))
