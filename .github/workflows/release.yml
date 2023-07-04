@@ -1,0 +1,28 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: lein deps
+
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Deploy library
+        env:
+          CLOJARS_USERNAME: ${{secrets.CLOJARS_USERNAME}}
+          CLOJARS_PASSWORD: ${{secrets.CLOJARS_PASSWORD}}
+
+        run: lein deploy clojars

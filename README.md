@@ -1,34 +1,14 @@
+[![CI](https://github.com/AtmosSystem/Atmos-Genesys/actions/workflows/release.yml/badge.svg)](https://github.com/AtmosSystem/Atmos-Genesys/actions/workflows/release.yml)
+
 # Atmos Genesys
 
-FIXME: description
+This library is used as a base to other atmos projects.
 
 ## Installation
 
-Download from http://example.com/FIXME.
-
-## Usage
-
-FIXME: explanation
-
-    $ java -jar atmos-genesys-0.1.0-standalone.jar [args]
-
-## Options
-
-FIXME: listing of options this app accepts.
-
-## Examples
-
-...
-
-### Bugs
-
-...
-
-### Any Other Sections
-
-### That You Think
-
-### Might be Useful
+```clojure
+[atmos-genesys "x.x.x"]
+```
 
 ## License
 
