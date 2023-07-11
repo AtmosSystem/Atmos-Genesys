@@ -103,7 +103,7 @@
 (defn valid-registration-token->?
   [token]
   (let [data-key (create-data-key :registration token)]
-    (if-let [exists? (key-exists? sessions data-key)]
+    (if-let [exists? (key-exists? registrations data-key)]
       (case exists?
         0 false
         1 true))))
