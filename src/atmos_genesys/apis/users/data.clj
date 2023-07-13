@@ -30,12 +30,11 @@
   (when-let [session-id (hash/encode (-> (UUID/randomUUID) str) :sha1)]
     (let [data-key (create-data-key :session session-id)
           encrypted-username (hash/encode username :sha256)]
-      (if-let [key-result (set-key-value sessions data-key {:username encrypted-username}
-                                         {:expire (if remember-me :never session-expiration-time)})]
-        (cond
-          (or (= key-result ["OK" 1]) (= key-result "OK")) (do
-                                                             (log/info "New logging session generated")
-                                                             session-id))))))
+      (when (set-key-value sessions data-key {:username encrypted-username}
+                           {:expire (if remember-me :never session-expiration-time)})
+        (do
+          (log/info "New logging session generated")
+          session-id)))))
 
 (s/fdef generate-session->
         :args (s/cat :username ::user-spec/username :remember-me ::user-spec/remember-me)
@@ -81,12 +80,10 @@
   (when-let [token (hash/encode (-> (UUID/randomUUID) str) :sha256)]
     (let [data-key (create-data-key :registration token)
           encrypted-username (hash/encode username :sha256)]
-      (if-let [key-result (set-key-value registrations data-key {:username encrypted-username}
-                                         {:expire registration-expiration-time})]
-        (cond
-          (or (= key-result ["OK" 1]) (= key-result "OK")) (do
-                                                             (log/info "New registration token generated")
-                                                             token))))))
+      (when (set-key-value registrations data-key {:username encrypted-username}
+                           {:expire registration-expiration-time})
+        (log/info "New registration token generated")
+        token))))
 
 (s/fdef generate-registration-token->
         :args (s/cat :username ::user-spec/username)

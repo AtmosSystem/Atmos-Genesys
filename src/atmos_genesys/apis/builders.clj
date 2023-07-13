@@ -22,7 +22,7 @@
 
        (if-let [data (handler)]
          (if (fn? http-code-or-fn) (http-code-or-fn data) {http-code-or-fn data})
-         default-response)
+         (throw (ex-info (-> default-response first val) {})))
 
        (catch AssertionError e (log/exception e) default-response)
        (catch ExceptionInfo e
