@@ -11,10 +11,16 @@
 (def settings (config/read-edn :settings))
 
 (def users (data-device :users))
+
 (def sessions (data-device :sessions))
-(def session-expiration-time (get-in settings [:sessions :expiration-time])) ; In seconds
+(def session-expiration-time (try
+                               (parse-long (get-in settings [:sessions :expiration-time]))
+                               (catch Exception _ :never))) ; In seconds
+
 (def registrations (data-device :registrations))
-(def registration-expiration-time (get-in settings [:registrations :expiration-time])) ; In seconds
+(def registration-expiration-time (try
+                                    (parse-long (get-in settings [:registrations :expiration-time]))
+                                    (catch Exception _ :never))) ; In seconds
 
 (defn create-data-key [key-type data]
   (str (name key-type) ":" data))

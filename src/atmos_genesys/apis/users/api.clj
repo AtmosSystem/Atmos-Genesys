@@ -1,12 +1,13 @@
 (ns atmos-genesys.apis.users.api
-  (:require [atmos-genesys.apis.users.core :as c]
-            [atmos-genesys.apis.users.spec :as user-spec]
-            [atmos-web-kernel-reitit.core :as web]
-            [reitit.coercion.spec]))
+  (:require
+    [atmos-genesys.apis.builders :as api-builders]
+    [atmos-genesys.apis.users.core :as c]
+    [atmos-genesys.apis.users.spec :as user-spec]
+    [atmos-web-kernel-reitit.core :as web]
+    [reitit.coercion.spec]))
 
 (def auth-routes
-  ["/basic"
-   ["/login/" {:name       ::basic-auth-login
+  [["/login/" {:name       ::basic-auth-login
                :coercion   reitit.coercion.spec/coercion
                :parameters {:body ::user-spec/user-credentials}
                :post       (web/web-handler
@@ -31,21 +32,29 @@
                                               (c/b-logged? session-id))))}]])
 
 (def registration-routes
-  [["/:username/token/" {:name       ::registration-token
+  [["/{username}/token" {:name       ::registration-token
                          :coercion   reitit.coercion.spec/coercion
                          :parameters {:path {:username ::user-spec/username}}
+                         :responses  {201 {:body map?}
+                                      400 {:body string?}}
                          :get        (web/web-handler
                                        (fn [{:keys [parameters]}]
                                          (let [{:keys [username]} (-> parameters :path)]
-                                           (c/registration-token username))))}]
+                                           (api-builders/try-response-or-catch
+                                             #(c/registration-token username)
+                                             (fn [token] {201 {:token token}}) 400))))}]
 
-   ["/create/" {:name       ::create-registration
-                :coercion   reitit.coercion.spec/coercion
-                :parameters {:body ::user-spec/new-registration}
-                :post       (web/web-handler
-                              (fn [{:keys [parameters]}]
-                                (let [{:keys [user-data registration-token]} (-> parameters :body)]
-                                  (c/register-user user-data registration-token))))}]])
+   ["" {:name       ::create-registration
+        :coercion   reitit.coercion.spec/coercion
+        :parameters {:body ::user-spec/new-registration}
+        :responses  {201 {:body map?}
+                     400 {:body string?}}
+        :post       (web/web-handler
+                      (fn [{:keys [parameters]}]
+                        (let [{:keys [user-data registration-token]} (-> parameters :body)]
+                          (api-builders/try-response-or-catch
+                            #(c/register-user user-data registration-token)
+                            (fn [user-id] {201 {:id user-id}}) 400))))}]])
 
 
 (def routes

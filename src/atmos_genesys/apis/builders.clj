@@ -1,11 +1,13 @@
 (ns atmos-genesys.apis.builders
-  (:require [atmos-data-kernel.services :as data-service]
-            [atmos-logs.core :as log]
-            [atmos-web-kernel-reitit.core :as web]
-            [inflections.core :as inflections]
-            [reitit.coercion.spec])
-  (:import (clojure.lang ExceptionInfo)
-           (java.security InvalidParameterException)))
+  (:require
+    [atmos-data-kernel.services :as data-service]
+    [atmos-logs.core :as log]
+    [atmos-web-kernel-reitit.core :as web]
+    [inflections.core :as inflections]
+    [reitit.coercion.spec])
+  (:import
+    (clojure.lang ExceptionInfo)
+    (java.security InvalidParameterException)))
 
 (def default-responses {204 {204 "The resource was not created"}
                         404 {404 "Resource not found"}
@@ -17,8 +19,11 @@
   ([handler http-code-or-fn default-response]
    (let [default-response (get default-responses default-response)]
      (try
+
        (if-let [data (handler)]
-         (if (fn? http-code-or-fn) (http-code-or-fn data) {http-code-or-fn data}) default-response)
+         (if (fn? http-code-or-fn) (http-code-or-fn data) {http-code-or-fn data})
+         default-response)
+
        (catch AssertionError e (log/exception e) default-response)
        (catch ExceptionInfo e
          (log/exception e) (let [data (assoc (ex-data e) :message (ex-message e))]
@@ -66,7 +71,9 @@
                     :handler    (web/web-handler
                                   (fn [{:keys [parameters]}]
                                     (let [data (-> parameters :body)]
-                                      (try-response-or-catch #(create-handler data) 201 400))))}}]))
+                                      (try-response-or-catch #(create-handler data)
+                                                             (fn [data-id] {201 {:id data-id}})
+                                                             400))))}}]))
 
 (defmethod child-route :document [api-name _ handlers]
   (let [[route-name single-api-name] (route-child-names api-name :document)
