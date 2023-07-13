@@ -1,5 +1,5 @@
 (ns atmos-genesys.apis.users.data
-  (:require [atmos-data-kernel.core :refer [add-data delete-key get-by key-exists? set-key-value]]
+  (:require [atmos-data-kernel.core :refer [add-data delete-key get-by key-exists? set-key-property set-key-value]]
             [atmos-genesys.apis.users.spec :as user-spec]
             [atmos-genesys.services.data.core :refer [data-device]]
             [atmos-genesys.services.hash :as hash]
@@ -30,11 +30,13 @@
   (when-let [session-id (hash/encode (-> (UUID/randomUUID) str) :sha1)]
     (let [data-key (create-data-key :session session-id)
           encrypted-username (hash/encode username :sha256)]
-      (when (set-key-value sessions data-key {:username encrypted-username}
-                           {:expire (if remember-me :never session-expiration-time)})
-        (do
-          (log/info "New logging session generated")
-          session-id)))))
+      (when (set-key-value sessions data-key {:username encrypted-username})
+        (log/info "New logging session generated")
+
+        (if-not (and remember-me (= session-expiration-time :never))
+          (set-key-property sessions data-key :expire session-expiration-time))
+
+        session-id))))
 
 (s/fdef generate-session->
         :args (s/cat :username ::user-spec/username :remember-me ::user-spec/remember-me)
@@ -80,9 +82,12 @@
   (when-let [token (hash/encode (-> (UUID/randomUUID) str) :sha256)]
     (let [data-key (create-data-key :registration token)
           encrypted-username (hash/encode username :sha256)]
-      (when (set-key-value registrations data-key {:username encrypted-username}
-                           {:expire registration-expiration-time})
+      (when (set-key-value registrations data-key {:username encrypted-username})
         (log/info "New registration token generated")
+
+        (if-not (= registration-expiration-time :never)
+          (set-key-property registrations data-key :expire registration-expiration-time))
+
         token))))
 
 (s/fdef generate-registration-token->
