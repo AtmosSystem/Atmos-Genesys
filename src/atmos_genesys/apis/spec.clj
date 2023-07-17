@@ -1,6 +1,7 @@
 (ns atmos-genesys.apis.spec
-  (:require [clojure.spec.alpha :as s]
-            [reitit.spec :as rs]))
+  (:require
+    [clojure.spec.alpha :as s]
+    [reitit.spec :as rs]))
 
 (s/def :api.route/name keyword?)
 (s/def :api.route.method/get (s/keys :req-un [::rs/handler]))

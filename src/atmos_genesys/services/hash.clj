@@ -1,7 +1,8 @@
 (ns atmos-genesys.services.hash
-  (:require [buddy.core.codecs :refer [bytes->hex]]
-            [buddy.core.hash :as hash]
-            [clojure.spec.alpha :as s]))
+  (:require
+    [buddy.core.codecs :refer [bytes->hex]]
+    [buddy.core.hash :as hash]
+    [clojure.spec.alpha :as s]))
 
 (def default-algorithms {:sha1   hash/sha1
                          :sha256 hash/sha256

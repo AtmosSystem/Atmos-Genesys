@@ -1,7 +1,9 @@
 (ns atmos-genesys.services.logger
-  (:require [atmos-logs.core :as log-core]
-            [taoensso.timbre :as timbre])
-  (:import (java.util Map)))
+  (:require
+    [atmos-logs.core :as log-core]
+    [taoensso.timbre :as timbre])
+  (:import
+    (java.util Map)))
 
 (defmacro handle-log
   [& body]
