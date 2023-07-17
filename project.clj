@@ -9,7 +9,7 @@
                  [org.clojure/core.memoize "1.0.257"]
                  [inflections "0.14.1"]
                  ; Security
-                 [buddy/buddy-core "1.10.413"]
+                 [buddy/buddy-hashers "2.0.167"]
                  ; Data
                  [org.clojars.atmos-system/atmos-data-kernel "1.0-SNAPSHOT"]
                  ; Web
