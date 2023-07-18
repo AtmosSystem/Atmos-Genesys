@@ -4,28 +4,48 @@
     [atmos-logs.core :as log]
     [inflections.core :as inflections]
     [reitit.coercion.spec])
-  (:import
-    (clojure.lang ExceptionInfo)))
+  (:import (clojure.lang ExceptionInfo)))
 
-(def default-responses {204 {204 "The resource was not created"}
-                        404 {404 "Resource not found"}
-                        400 {400 "Bad request. Can't process the request"}})
+(def valid-responses {200 :ok
+                      201 :created})
 
-(defn try-response-or-catch
-  ([handler default-response]
-   (try-response-or-catch handler 200 default-response))
-  ([handler http-code-or-fn default-response]
-   (let [default-response (get default-responses default-response)]
+(def invalid-responses {204 "The resource was not created"
+                        404 "Resource not found"
+                        400 "Bad request. Can't process the request"})
+
+(defmacro try-response-or-catch
+  [http-code default-code & forms]
+  `(let [default-message# (get invalid-responses ~default-code)]
      (try
 
-       (if-let [data (handler)]
-         (if (fn? http-code-or-fn) (http-code-or-fn data) {http-code-or-fn data})
-         (throw (ex-info (-> default-response first val) {})))
+       (if-let [data# (do ~@forms)]
+         {~http-code data#}
+         (throw (ex-info default-message# {})))
 
-       (catch AssertionError e (log/exception e) default-response)
-       (catch ExceptionInfo e
-         (log/exception e) (let [data (assoc (ex-data e) :message (ex-message e))]
-                             {400 data}))))))
+       (catch AssertionError e# (log/exception e#) {~default-code default-message#})
+       (catch ExceptionInfo e#
+         (log/exception e#)
+
+         (let [data# {:type :exception :message (ex-message e#) :data (ex-data e#)}]
+           {~default-code data#})))))
+
+(defmacro build-response-or-catch
+  [http-code default-code]
+  (let [http-code-name (name (get valid-responses http-code))
+        default-code-name (str default-code)
+        fn-name (symbol (str "try-" http-code-name "-or-" default-code-name))
+        fn-args 'forms]
+    `(defn ~fn-name
+       [& ~fn-args]
+       (try-response-or-catch ~http-code ~default-code (last ~fn-args)))))
+
+(declare try-ok-or-400 try-ok-or-404)
+(build-response-or-catch 200 400)
+(build-response-or-catch 201 404)
+
+(declare try-created-or-400 try-created-or-204)
+(build-response-or-catch 201 400)
+(build-response-or-catch 201 204)
 
 
 (defn- route-child-names
@@ -65,14 +85,13 @@
                                    (all-handler single-api-name)))}
 
          :post     {:parameters {:body create-request-spec}
-                    :responses  {201 {:body create-response-spec}
-                                 400 {:body string?}}
+                    :responses  {201 {:body create-response-spec}}
                     :handler    (http-handler
                                   (fn [{:keys [parameters]}]
                                     (let [data (-> parameters :body)]
-                                      (try-response-or-catch #(create-handler data)
-                                                             (fn [data-id] {201 {:id data-id}})
-                                                             400))))}}]))
+                                      (try-created-or-204
+                                        (let [data-id (create-handler data)]
+                                          {:id data-id})))))}}]))
 
 (defmethod child-route :document [api-name _ http-handler handlers]
   (let [[route-name single-api-name] (route-child-names api-name :document)
@@ -88,13 +107,11 @@
               :coercion reitit.coercion.spec/coercion
 
               :get      {:parameters {:path {:id path-request-spec}}
-                         :responses  {200 {:body response-spec}
-                                      404 {:body string?}}
+                         :responses  {200 {:body response-spec}}
                          :handler    (http-handler
                                        (fn [{:keys [parameters]}]
                                          (let [{:keys [id]} (-> parameters :path)]
-                                           (try-response-or-catch
-                                             #(one-handler single-api-name :by id) 404))))}
+                                           (try-ok-or-404 (one-handler single-api-name :by id)))))}
 
               :put      {:parameters {:path {:id path-request-spec}
                                       :body body-request-spec}
@@ -103,17 +120,18 @@
                                        (fn [{:keys [parameters]}]
                                          (let [data (-> parameters :body)
                                                document-id (-> parameters :path :id)]
-                                           (try-response-or-catch #(update-handler document-id data)
-                                                                  (fn [updated?] {:updated updated?}) 400))))}
+                                           (try-ok-or-400
+                                             (let [updated? (update-handler document-id data)]
+                                               {:updated updated?})))))}
 
               :delete   {:parameters {:path {:id path-request-spec}}
-                         :responses  {200 {:body map?}
-                                      400 {:body string?}}
+                         :responses  {200 {:body map?}}
                          :handler    (http-handler
                                        (fn [{:keys [parameters]}]
                                          (let [{:keys [id]} (-> parameters :path)]
-                                           (try-response-or-catch #(delete-handler id)
-                                                                  (fn [deleted?] {:deleted deleted?}) 400))))}}]))
+                                           (try-ok-or-400
+                                             (let [deleted? (delete-handler id)]
+                                               {:deleted deleted?})))))}}]))
 
 
 (defn simple-routes
