@@ -10,6 +10,7 @@
                  [inflections "0.14.1"]
                  ; Security
                  [buddy/buddy-hashers "2.0.167"]
+                 [buddy/buddy-auth "3.0.1"]
                  ; Data
                  [org.clojars.atmos-system/atmos-data-kernel "1.0-SNAPSHOT"]
                  ; Web
