@@ -6,8 +6,7 @@
     [reitit.coercion.spec])
   (:import (clojure.lang ExceptionInfo)))
 
-(def invalid-responses {204 "The resource was not created"
-                        404 "Resource not found"
+(def invalid-responses {404 "Resource not found"
                         400 "Bad request. Can't process the request"})
 
 (defmacro try-response-or-catch
@@ -26,17 +25,18 @@
          (let [data# {:type :exception :message (ex-message e#) :data (ex-data e#)}]
            {~default-code data#})))))
 
-(defmacro build-response-or-catch
-  [http-code default-code]
-  (let [fn-args 'forms]
-    `(fn [& ~fn-args]
-       (try-response-or-catch ~http-code ~default-code (last ~fn-args)))))
 
-(def try-ok-or-400 (build-response-or-catch 200 400))
-(def try-ok-or-404 (build-response-or-catch 200 404))
+(defmacro try-ok-or-400
+  [& forms]
+  `(try-response-or-catch 200 400 ~@forms))
 
-(def try-created-or-400 (build-response-or-catch 201 400))
-(def try-created-or-204 (build-response-or-catch 201 204))
+(defmacro try-ok-or-404
+  [& forms]
+  `(try-response-or-catch 200 404 ~@forms))
+
+(defmacro try-created-or-400
+  [& forms]
+  `(try-response-or-catch 201 400 ~@forms))
 
 
 (defn- route-child-names
@@ -80,7 +80,7 @@
                     :handler    (http-handler
                                   (fn [{:keys [parameters]}]
                                     (let [data (-> parameters :body)]
-                                      (try-created-or-204
+                                      (try-created-or-400
                                         (let [data-id (create-handler data)]
                                           {:id data-id})))))}}]))
 
