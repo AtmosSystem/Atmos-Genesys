@@ -6,9 +6,6 @@
     [reitit.coercion.spec])
   (:import (clojure.lang ExceptionInfo)))
 
-(def valid-responses {200 :ok
-                      201 :created})
-
 (def invalid-responses {204 "The resource was not created"
                         404 "Resource not found"
                         400 "Bad request. Can't process the request"})
@@ -31,21 +28,15 @@
 
 (defmacro build-response-or-catch
   [http-code default-code]
-  (let [http-code-name (name (get valid-responses http-code))
-        default-code-name (str default-code)
-        fn-name (symbol (str "try-" http-code-name "-or-" default-code-name))
-        fn-args 'forms]
-    `(defn ~fn-name
-       [& ~fn-args]
+  (let [fn-args 'forms]
+    `(fn [& ~fn-args]
        (try-response-or-catch ~http-code ~default-code (last ~fn-args)))))
 
-(declare try-ok-or-400 try-ok-or-404)
-(build-response-or-catch 200 400)
-(build-response-or-catch 200 404)
+(def try-ok-or-400 (build-response-or-catch 200 400))
+(def try-ok-or-404 (build-response-or-catch 200 404))
 
-(declare try-created-or-400 try-created-or-204)
-(build-response-or-catch 201 400)
-(build-response-or-catch 201 204)
+(def try-created-or-400 (build-response-or-catch 201 400))
+(def try-created-or-204 (build-response-or-catch 201 204))
 
 
 (defn- route-child-names
