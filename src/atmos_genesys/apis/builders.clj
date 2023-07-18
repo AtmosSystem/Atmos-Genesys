@@ -41,7 +41,7 @@
 
 (declare try-ok-or-400 try-ok-or-404)
 (build-response-or-catch 200 400)
-(build-response-or-catch 201 404)
+(build-response-or-catch 200 404)
 
 (declare try-created-or-400 try-created-or-204)
 (build-response-or-catch 201 400)
