@@ -2,12 +2,10 @@
   (:require
     [atmos-data-kernel.services :as data-service]
     [atmos-logs.core :as log]
-    [atmos-web-kernel-reitit.core :as web]
     [inflections.core :as inflections]
     [reitit.coercion.spec])
   (:import
-    (clojure.lang ExceptionInfo)
-    (java.security InvalidParameterException)))
+    (clojure.lang ExceptionInfo)))
 
 (def default-responses {204 {204 "The resource was not created"}
                         404 {404 "Resource not found"}
@@ -46,11 +44,12 @@
       [request response (or handler default)])
     (if-not required
       [nil nil default]
-      (throw (InvalidParameterException. "A valid route type is required on handler")))))
 
-(defmulti child-route (fn [api-name route-type handlers] (keyword route-type)))
+      (throw (ex-info "A valid route type is required on handler" {})))))
 
-(defmethod child-route :collection [api-name _ handlers]
+(defmulti child-route (fn [api-name route-type http-handler handlers] (keyword route-type)))
+
+(defmethod child-route :collection [api-name _ http-handler handlers]
   (let [[route-name single-api-name] (route-child-names api-name :collection)
 
         {collection-handlers :collection} handlers
@@ -61,21 +60,21 @@
          :coercion reitit.coercion.spec/coercion
 
          :get      {:responses {200 {:body all-response-spec}}
-                    :handler   (web/web-handler
+                    :handler   (http-handler
                                  (fn [_]
                                    (all-handler single-api-name)))}
 
          :post     {:parameters {:body create-request-spec}
                     :responses  {201 {:body create-response-spec}
                                  400 {:body string?}}
-                    :handler    (web/web-handler
+                    :handler    (http-handler
                                   (fn [{:keys [parameters]}]
                                     (let [data (-> parameters :body)]
                                       (try-response-or-catch #(create-handler data)
                                                              (fn [data-id] {201 {:id data-id}})
                                                              400))))}}]))
 
-(defmethod child-route :document [api-name _ handlers]
+(defmethod child-route :document [api-name _ http-handler handlers]
   (let [[route-name single-api-name] (route-child-names api-name :document)
 
         {document-handlers :document} handlers
@@ -91,7 +90,7 @@
               :get      {:parameters {:path {:id path-request-spec}}
                          :responses  {200 {:body response-spec}
                                       404 {:body string?}}
-                         :handler    (web/web-handler
+                         :handler    (http-handler
                                        (fn [{:keys [parameters]}]
                                          (let [{:keys [id]} (-> parameters :path)]
                                            (try-response-or-catch
@@ -100,7 +99,7 @@
               :put      {:parameters {:path {:id path-request-spec}
                                       :body body-request-spec}
                          :responses  {200 {:body map?}}
-                         :handler    (web/web-handler
+                         :handler    (http-handler
                                        (fn [{:keys [parameters]}]
                                          (let [data (-> parameters :body)
                                                document-id (-> parameters :path :id)]
@@ -110,7 +109,7 @@
               :delete   {:parameters {:path {:id path-request-spec}}
                          :responses  {200 {:body map?}
                                       400 {:body string?}}
-                         :handler    (web/web-handler
+                         :handler    (http-handler
                                        (fn [{:keys [parameters]}]
                                          (let [{:keys [id]} (-> parameters :path)]
                                            (try-response-or-catch #(delete-handler id)
@@ -119,9 +118,9 @@
 
 (defn simple-routes
   [routes]
-  (let [{api-name :name handlers :handlers} routes
+  (let [{api-name :name http-handler :http-handler handlers :handlers} routes
         route-name (str "/" (-> api-name name))
-        child-route-simplified (fn [route-type] (child-route api-name route-type handlers))]
+        child-route-simplified (fn [route-type] (child-route api-name route-type http-handler handlers))]
     [route-name
      (child-route-simplified :collection)
      (child-route-simplified :document)]))
