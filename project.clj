@@ -1,4 +1,4 @@
-(defproject org.clojars.atmos-system/atmos-genesys "1.1"
+(defproject org.clojars.atmos-system/atmos-genesys "1.2"
   :description "The basis of all web projects using atmos tech"
   :url "https://github.com/AtmosSystem/Atmos-Genesys"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"

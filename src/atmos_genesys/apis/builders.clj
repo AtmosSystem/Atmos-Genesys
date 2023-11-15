@@ -128,9 +128,9 @@
 
 (defn simple-routes
   [routes]
-  (let [{api-name :name api-url :url http-handler :http-handler handlers :handlers} routes
+  (let [{api-name :name api-url :url url-parameters :parameters http-handler :http-handler handlers :handlers} routes
         api-url (str "/" api-url)
         child-route-simplified (fn [route-type] (child-route api-name route-type http-handler handlers))]
-    [api-url
+    [api-url (merge {:coercion reitit.coercion.spec/coercion} (if url-parameters {:parameters url-parameters}))
      (child-route-simplified :collection)
      (child-route-simplified :document)]))
