@@ -72,8 +72,9 @@
 
          :get      {:responses {200 {:body all-response-spec}}
                     :handler   (http-handler
-                                 (fn [_]
-                                   (all-handler single-api-name)))}
+                                 (fn [{:keys [parameters]}]
+                                   (let [{:keys [user-id]} (-> parameters :path)]
+                                     (all-handler single-api-name {:user-id user-id}))))}
 
          :post     {:parameters {:body create-request-spec}
                     :responses  {201 {:body create-response-spec}}
@@ -101,8 +102,8 @@
                          :responses  {200 {:body response-spec}}
                          :handler    (http-handler
                                        (fn [{:keys [parameters]}]
-                                         (let [{:keys [id]} (-> parameters :path)]
-                                           (try-ok-or-404 (one-handler single-api-name :by id)))))}
+                                         (let [{:keys [user-id id]} (-> parameters :path)]
+                                           (try-ok-or-404 (one-handler single-api-name :by id {:user-id user-id})))))}
 
               :put      {:parameters {:path {:id path-request-spec}
                                       :body body-request-spec}
@@ -127,9 +128,9 @@
 
 (defn simple-routes
   [routes]
-  (let [{api-name :name http-handler :http-handler handlers :handlers} routes
-        route-name (str "/" (-> api-name name))
+  (let [{api-name :name api-url :url http-handler :http-handler handlers :handlers} routes
+        api-url (str "/" api-url)
         child-route-simplified (fn [route-type] (child-route api-name route-type http-handler handlers))]
-    [route-name
+    [api-url
      (child-route-simplified :collection)
      (child-route-simplified :document)]))

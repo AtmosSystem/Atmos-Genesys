@@ -1,4 +1,4 @@
-(defproject org.clojars.atmos-system/atmos-genesys "1.0"
+(defproject org.clojars.atmos-system/atmos-genesys "1.1"
   :description "The basis of all web projects using atmos tech"
   :url "https://github.com/AtmosSystem/Atmos-Genesys"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
@@ -12,7 +12,7 @@
                  [buddy/buddy-hashers "2.0.167"]
                  [buddy/buddy-auth "3.0.1"]
                  ; Data
-                 [org.clojars.atmos-system/atmos-data-kernel "1.0"]
+                 [org.clojars.atmos-system/atmos-data-kernel "1.1"]
                  ; Web
                  [org.clojars.atmos-system/atmos-web-kernel-reitit "2.0"]
                  ; Logging
