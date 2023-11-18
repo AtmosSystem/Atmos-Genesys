@@ -72,18 +72,16 @@
 
          :get      {:responses {200 {:body all-response-spec}}
                     :handler   (http-handler
-                                 (fn [{:keys [parameters]}]
-                                   (let [{:keys [user-id]} (-> parameters :path)]
-                                     (all-handler single-api-name {:user-id user-id}))))}
+                                 (fn [{{path-parameters :path} :parameters}]
+                                   (all-handler single-api-name path-parameters)))}
 
          :post     {:parameters {:body create-request-spec}
                     :responses  {201 {:body create-response-spec}}
                     :handler    (http-handler
-                                  (fn [{:keys [parameters]}]
-                                    (let [data (-> parameters :body)]
-                                      (try-created-or-400
-                                        (let [data-id (create-handler data)]
-                                          {:id data-id})))))}}]))
+                                  (fn [{{data :body path-parameters :path} :parameters}]
+                                    (try-created-or-400
+                                      (let [data-id (create-handler data path-parameters)]
+                                        {:id data-id}))))}}]))
 
 (defmethod child-route :document [api-name _ http-handler handlers]
   (let [[route-name single-api-name] (route-child-names api-name :document)
