@@ -1,4 +1,4 @@
-(defproject org.clojars.atmos-system/atmos-genesys "1.3"
+(defproject org.clojars.atmos-system/atmos-genesys "1.5"
   :description "The basis of all web projects using atmos tech"
   :url "https://github.com/AtmosSystem/Atmos-Genesys"
   :license {:name "EPL-2.0 OR GPL-2.0-or-later WITH Classpath-exception-2.0"
@@ -16,8 +16,7 @@
                  ; Web
                  [org.clojars.atmos-system/atmos-web-kernel-reitit "2.0"]
                  ; Logging
-                 [org.clojars.atmos-system/atmos-logs "3.0"]
-                 [com.taoensso/timbre "5.2.1"]]
+                 [org.clojars.atmos-system/atmos-logs "3.7"]]
   :deploy-repositories [["clojars" {:sign-releases false
                                     :url           "https://repo.clojars.org/"
                                     :username :env/clojars_username
