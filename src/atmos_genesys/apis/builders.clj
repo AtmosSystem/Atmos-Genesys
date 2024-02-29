@@ -9,6 +9,9 @@
 (def invalid-responses {404 "Resource not found"
                         400 "Bad request. Can't process the request"})
 
+(def logger {:name "API.builders"
+             :ns   'atmos-genesys.apis.builders})
+
 (defmacro try-response-or-catch
   [http-code default-code & forms]
   `(let [default-message# (get invalid-responses ~default-code)]
@@ -18,9 +21,9 @@
          {~http-code data#}
          (throw (ex-info default-message# {})))
 
-       (catch AssertionError e# (log/exception e#) {~default-code default-message#})
+       (catch AssertionError e# (log/exception logger e#) {~default-code default-message#})
        (catch ExceptionInfo e#
-         (log/exception e#)
+         (log/exception logger e#)
 
          (let [data# {:type :exception :message (ex-message e#) :data (ex-data e#)}]
            {~default-code data#})))))
