@@ -17,16 +17,30 @@
   `(let [default-message# (get invalid-responses ~default-code)]
      (try
 
-       (if-let [data# (do ~@forms)]
+       (if-let [data# (try
+                        (do ~@forms)
+
+                        (catch AssertionError e#
+                          (throw (ex-info default-message# {:exception e# :assertion true})))
+
+                        (catch Exception e#
+                          (throw (ex-info default-message# {:exception e# :assertion false}))))]
+
          {~http-code data#}
+
          (throw (ex-info default-message# {})))
 
-       (catch AssertionError e# (log/exception logger e#) {~default-code default-message#})
-       (catch ExceptionInfo e#
-         (log/exception logger e#)
+       (catch ExceptionInfo e# (let [extra-data# (ex-data e#)
+                                     extra-data# (if (:assertion extra-data#)
+                                                   {:exception (.getMessage (:exception extra-data#))}
+                                                   (dissoc extra-data# :assertion))
 
-         (let [data# {:type :exception :message (ex-message e#) :data (ex-data e#)}]
-           {~default-code data#})))))
+                                     data# {:type :exception :message default-message# :extra-data extra-data#}]
+
+                                 (do
+                                   (log/error logger {:message default-message# :extra-data extra-data#})
+
+                                   {~default-code data#}))))))
 
 
 (defmacro try-ok-or-400
