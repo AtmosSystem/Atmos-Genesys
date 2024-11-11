@@ -17,6 +17,7 @@ jobs:
 
   deploy:
     runs-on: ubuntu-latest
+    if: contains('refs/heads/main', github.ref)
 
     steps:
       - uses: actions/checkout@v3
