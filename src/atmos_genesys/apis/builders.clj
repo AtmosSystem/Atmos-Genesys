@@ -21,24 +21,23 @@
                         (do ~@forms)
 
                         (catch AssertionError e#
-                          (throw (ex-info default-message# {:exception e# :assertion true})))
+                          (throw (ex-info default-message# {:assertion true} e#)))
 
                         (catch Exception e#
-                          (throw (ex-info default-message# {:exception e# :assertion false}))))]
+                          (throw (ex-info default-message# {:assertion false} e#))))]
 
          {~http-code data#}
 
          (throw (ex-info default-message# {})))
 
-       (catch ExceptionInfo e# (let [extra-data# (ex-data e#)
-                                     extra-data# (if (:assertion extra-data#)
-                                                   {:exception (.getMessage (:exception extra-data#))}
-                                                   (dissoc extra-data# :assertion))
-
-                                     data# {:type :exception :message default-message# :extra-data extra-data#}]
+       (catch ExceptionInfo e# (let [exception-data# (ex-data e#)
+                                     assertion?# (:assertion exception-data#)
+                                     data# {:type (if assertion?# :assertion :exception) :message default-message#}
+                                     cause# (ex-cause e#)
+                                     data# (if cause# (assoc data# :cause (.getMessage cause#)) data#)]
 
                                  (do
-                                   (log/error logger {:message default-message# :extra-data extra-data#})
+                                   (log/exception logger e#)
 
                                    {~default-code data#}))))))
 
