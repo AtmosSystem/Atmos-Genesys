@@ -17,22 +17,13 @@
   `(let [default-message# (get invalid-responses ~default-code)]
      (try
 
-       (if-let [data# (try
-                        (do ~@forms)
-
-                        (catch AssertionError e#
-                          (throw (ex-info default-message# {:assertion true} e#)))
-
-                        (catch Exception e#
-                          (throw (ex-info default-message# {:assertion false} e#))))]
+       (if-let [data# (do ~@forms)]
 
          {~http-code data#}
 
          (throw (ex-info default-message# {})))
 
-       (catch ExceptionInfo e# (let [exception-data# (ex-data e#)
-                                     assertion?# (:assertion exception-data#)
-                                     data# {:type (if assertion?# :assertion :exception) :message default-message#}
+       (catch ExceptionInfo e# (let [data# {:type :exception :message default-message# :extra-data (ex-data e#)}
                                      cause# (ex-cause e#)
                                      data# (if cause# (assoc data# :cause (.getMessage cause#)) data#)]
 
