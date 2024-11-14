@@ -1,7 +1,6 @@
 (ns atmos-genesys.apis.builders-test
   (:require
     [atmos-genesys.apis.builders :as builder]
-    [clojure.spec.alpha :as s]
     [clojure.test :refer :all])
   (:import (java.util Map)))
 
@@ -14,7 +13,7 @@
 
 (deftest API-responses
 
-  (let [exception-message-keys [:type :extra-data :message]
+  (let [exception-message-keys [:type :extra-data :message :cause]
         code #(first (keys %))
         data #(first (vals %))]
 
@@ -28,24 +27,18 @@
 
     (testing "Method returns 400 status code when exception occurs"
 
-      (let [response (builder/try-ok-or-400 (/ 1 0))]
+      (let [response (builder/try-ok-or-400 (try
+                                              (/ 1 0)
+                                              (catch Exception e (throw (ex-info "Error" {} e)))))]
 
         (is (= (code response) 400))))
 
 
     (testing "Method returns 400 status code and a valid exception map when exception occurs"
 
-      (let [response (builder/try-ok-or-400 (/ 1 0))]
-
-        (are [expected result] (= expected result)
-
-                               400 (code response)
-                               exception-message-keys (keys (data response)))))
-
-
-    (testing "Method returns 400 status code and a valid exception map when invalid spec occurs"
-
-      (let [response (builder/try-ok-or-400 (assert (s/valid? number? "w")))]
+      (let [response (builder/try-ok-or-400 (try
+                                              (/ 1 0)
+                                              (catch Exception e (throw (ex-info "Error" {} e)))))]
 
         (are [expected result] (= expected result)
 
